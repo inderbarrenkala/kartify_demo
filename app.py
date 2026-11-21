@@ -29,6 +29,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "kartify.db")
+CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 
 MAX_ATTEMPTS = 3          # total order_agent runs per turn (1 initial + 2 retries)
 PASS_THRESHOLD = 0.75     # groundedness and precision must both reach this
@@ -47,20 +48,30 @@ ERROR_RESPONSE = (
 # Secrets
 # ---------------------------------------------------------------------------
 def load_api_key() -> Optional[str]:
-    key = os.environ.get("OPENAI_API_KEY")
+    key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPEN_AI_KEY")
     if key:
         return key
-    try:
-        return st.secrets["OPENAI_API_KEY"]
-    except Exception:
+
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, encoding="utf-8") as config_file:
+            config = json.load(config_file)
+        key = config.get("OPENAI_API_KEY") or config.get("OPEN_AI_KEY")
+        if key:
+            return key
+
+    secrets_path = os.path.join(BASE_DIR, ".streamlit", "secrets.toml")
+    user_secrets_path = os.path.expanduser("~/.streamlit/secrets.toml")
+    if not os.path.exists(secrets_path) and not os.path.exists(user_secrets_path):
         return None
+
+    return st.secrets["OPENAI_API_KEY"]
 
 
 OPENAI_API_KEY = load_api_key()
 if not OPENAI_API_KEY:
     st.error(
-        "OPENAI_API_KEY is not set. Add it as an environment variable "
-        "in your Render service settings and redeploy."
+        "OPENAI_API_KEY is not set. Add it to config.json, "
+        ".streamlit/secrets.toml, or your environment variables."
     )
     st.stop()
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY

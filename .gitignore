@@ -1,0 +1,6 @@
+.DS_Store
+.env
+.streamlit/secrets.toml
+.venv/
+venv/
+config.json
